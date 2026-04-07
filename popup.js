@@ -98,6 +98,7 @@ function getSlideTabOrder() {
 
   gTags.forEach((gTag) => {
     if (gTag.id.endsWith('_0')) return;
+    if (gTag.id.endsWith('-bg')) return;
 
     let isNested = false;
     let parent = gTag.parentElement;
