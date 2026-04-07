@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const li = document.createElement('li');
       
       const numberSpan = document.createElement('strong');
-      numberSpan.textContent = `${index + 1}. `;
       
       const badge = document.createElement('span');
       badge.className = 'type-badge';
@@ -120,22 +119,43 @@ function getSlideTabOrder() {
     const gRect = gTag.getBoundingClientRect();
     if (gRect.width === 0 && gRect.height === 0) return;
 
-    const ariaLabel = gTag.getAttribute('aria-label') || "";
+    let ariaLabel = gTag.getAttribute('aria-label') || "";
+
+    // deep search for aria-label in children if not found on the g tag itself
+    if (!ariaLabel) {
+      const childWithAria = gTag.querySelector('[aria-label]');
+      if (childWithAria) {
+        ariaLabel = childWithAria.getAttribute('aria-label') || "";
+      }
+    }
     const textContent = gTag.textContent.trim();
     const labelLower = ariaLabel.toLowerCase();
+
+    // Google renders the backend JSON "title" and "description" into these SVG tags
+    let altText = "";
+    
+    // Check all nested SVG title and desc tags
+    const titleEls = Array.from(gTag.querySelectorAll('title'));
+    const descEls = Array.from(gTag.querySelectorAll('desc'));
+    
+    // Extract and combine them, prioritizing title then description
+    titleEls.forEach(t => altText += t.textContent + " ");
+    descEls.forEach(d => altText += d.textContent + " ");
+    
+    altText = altText.trim();
 
     let itemType = "Element";
     if (labelLower.includes("image") || gTag.querySelector('image')) {
         itemType = "Image";
-    } else if (labelLower.includes("shape") || gTag.querySelector('path, rect, circle, polygon')) {
-        itemType = "Shape";
     } else if (labelLower.includes("text box") || labelLower.includes("title") || textContent) {
         itemType = "Text Box";
+    } else if (labelLower.includes("shape") || gTag.querySelector('path, rect, circle, polygon')) {
+        itemType = "Shape";
     } else if (labelLower.includes("line") || gTag.querySelector('line')) {
         itemType = "Line";
     }
 
-    let displayName = ariaLabel || textContent;
+    let displayName = altText || ariaLabel || textContent;
     if (!displayName) {
         displayName = `Unnamed ${itemType}`;
     }
