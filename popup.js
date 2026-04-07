@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const scanBtn = document.getElementById('scan-btn');
   const listContainer = document.getElementById('tab-order-list');
   const statusMsg = document.getElementById('status-message');
+  
+  let currentTabId = null; // We need to store this to use during hover events
 
   scanBtn.addEventListener('click', async () => {
     statusMsg.textContent = "Scanning slide...";
@@ -9,13 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      currentTabId = tab.id; // Save the tab ID for later
       
       if (!tab.url.includes("docs.google.com/presentation")) {
         throw new Error("Please open a Google Slides presentation.");
       }
 
       const injectionResults = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
+        target: { tabId: currentTabId },
         func: getSlideTabOrder 
       });
 
@@ -50,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
       badge.className = 'type-badge';
       badge.textContent = el.type;
 
-      // Make unnamed elements slightly italic/greyed out to distinguish them
       const textSpan = document.createElement('span');
       textSpan.textContent = el.text;
       if (el.text.startsWith('Unnamed')) {
@@ -61,12 +63,35 @@ document.addEventListener('DOMContentLoaded', () => {
       li.appendChild(numberSpan);
       li.appendChild(badge);
       li.appendChild(textSpan);
+      
+      // --- HOVER EVENT LISTENERS ---
+      // When the mouse enters the list item, inject the highlight script
+      li.addEventListener('mouseenter', () => {
+        if (!currentTabId) return;
+        chrome.scripting.executeScript({
+          target: { tabId: currentTabId },
+          func: highlightElementInSlide,
+          args: [el.id] // Pass the specific element ID to the injected function
+        });
+      });
+
+      // When the mouse leaves, inject the cleanup script
+      li.addEventListener('mouseleave', () => {
+         if (!currentTabId) return;
+         chrome.scripting.executeScript({
+          target: { tabId: currentTabId },
+          func: removeHighlightFromSlide
+        });
+      });
+
       listContainer.appendChild(li);
     });
   }
 });
 
-// --- CORE SCANNING FUNCTION ---
+// ==========================================
+//        --- INJECTED SCRIPTS  ---
+// ==========================================
 function getSlideTabOrder() {
   const gTags = Array.from(document.querySelectorAll('g[id^="editor-"]'));
   const tabOrderData = [];
@@ -78,16 +103,13 @@ function getSlideTabOrder() {
     let parent = gTag.parentElement;
     while (parent && parent.tagName.toLowerCase() === 'g') {
        if (parent.id && parent.id.startsWith('editor-') && !parent.id.endsWith('_0')) {
-           isNested = true;
+           isNested = true; 
            break;
        }
        parent = parent.parentElement;
     }
-    // If it's a child part of a larger element, skip it so we only count the parent
-    // eliminates double counting
     if (isNested) return; 
 
-    // Ensure it's on the currently visible slide
     const parentSvg = gTag.closest('svg');
     if (parentSvg) {
       const rect = parentSvg.getBoundingClientRect();
@@ -97,12 +119,10 @@ function getSlideTabOrder() {
     const gRect = gTag.getBoundingClientRect();
     if (gRect.width === 0 && gRect.height === 0) return;
 
-    // data extraction
     const ariaLabel = gTag.getAttribute('aria-label') || "";
     const textContent = gTag.textContent.trim();
     const labelLower = ariaLabel.toLowerCase();
 
-    // Type Guessing (even if there is no text!)
     let itemType = "Element";
     if (labelLower.includes("image") || gTag.querySelector('image')) {
         itemType = "Image";
@@ -114,13 +134,11 @@ function getSlideTabOrder() {
         itemType = "Line";
     }
 
-    // If it has a label, use it. If not, use the text. If neither, call it "Unnamed [Type]"
     let displayName = ariaLabel || textContent;
     if (!displayName) {
         displayName = `Unnamed ${itemType}`;
     }
 
-    // Limit text length so huge paragraphs don't break your UI
     if (displayName.length > 40 && !displayName.startsWith('Unnamed')) {
         displayName = displayName.substring(0, 40) + '...';
     }
@@ -133,4 +151,45 @@ function getSlideTabOrder() {
   });
 
   return tabOrderData;
+}
+
+// --- HIGHLIGHT FUNCTIONS ---
+function highlightElementInSlide(elementId) {
+  const targetElement = document.getElementById(elementId);
+  if (!targetElement) return;
+
+  // Get the exact coordinates of the element on the screen
+  const rect = targetElement.getBoundingClientRect();
+
+  // Look for an existing overlay, or create one if it doesn't exist
+  let overlay = document.getElementById('tab-checker-highlight-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tab-checker-highlight-overlay';
+    
+    // Style the overlay
+    overlay.style.position = 'fixed';
+    overlay.style.border = '3px solid #1a73e8'; // Blue outline
+    overlay.style.backgroundColor = 'rgba(26, 115, 232, 0.2)'; // Light blue fill
+    overlay.style.borderRadius = '4px';
+    overlay.style.zIndex = '999999'; // Ensure it's on top of everything
+    overlay.style.pointerEvents = 'none'; // Don't intercept clicks
+    overlay.style.transition = 'all 0.1s ease'; // Smooth movement
+    
+    document.body.appendChild(overlay);
+  }
+
+  // Move the overlay to perfectly cover the target element
+  overlay.style.top = `${rect.top}px`;
+  overlay.style.left = `${rect.left}px`;
+  overlay.style.width = `${rect.width}px`;
+  overlay.style.height = `${rect.height}px`;
+  overlay.style.display = 'block';
+}
+
+function removeHighlightFromSlide() {
+  const overlay = document.getElementById('tab-checker-highlight-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
 }
