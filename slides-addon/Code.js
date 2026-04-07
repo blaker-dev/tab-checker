@@ -19,7 +19,7 @@ function showSidebar() {
   SlidesApp.getUi().showSidebar(html);
 }
 
-// The core function replacing your DOM scraper
+// The core function
 function getSlideElements() {
   const presentation = SlidesApp.getActivePresentation();
   const selection = presentation.getSelection();
@@ -37,31 +37,16 @@ function getSlideElements() {
     const rawType = element.getPageElementType().toString(); // e.g., "SHAPE", "IMAGE", "LINE"
     
     let title = element.getTitle() || "";
-    let description = element.getDescription() || "";
+    let itemType = rawType;
     let textContent = "";
     
     // If it's a shape, try to extract the text inside it
     if (rawType === "SHAPE") {
       textContent = element.asShape().getText().asString().trim();
     }
-    
-    // Combine Title and Description for the Alt Text
-    let altText = (title + " " + description).trim();
 
-    // Smart Type Guessing
-    let itemType = "Element";
-    if (rawType === "IMAGE") {
-      itemType = "Image";
-    } else if (rawType === "LINE") {
-      itemType = "Line";
-    } else if (rawType === "GROUP") {
-      itemType = "Group";
-    } else if (rawType === "SHAPE") {
-      itemType = textContent ? "Text Box" : "Shape";
-    }
-
-    // Name Assignment (Alt Text -> Text Content -> Unnamed)
-    let displayName = altText || textContent;
+    // Display Name
+    let displayName = title || textContent;
     if (!displayName) {
         displayName = `Unnamed ${itemType}`;
     }
@@ -89,7 +74,7 @@ function highlightElementInSlide(objectId) {
   const elements = currentPage.getPageElements();
   for (let i = 0; i < elements.length; i++) {
     if (elements[i].getObjectId() === objectId) {
-      elements[i].select(); // Natively highlights the element in the UI!
+      elements[i].select(); 
       break;
     }
   }
