@@ -222,6 +222,7 @@
 
           allItems.forEach((li, index) => {
             const numberSpan = li.querySelector('.number-span');
+            if (numberSpan) numberSpan.textContent = `${index + 1}. `;
             
             newOrderIds.push(li.dataset.id);
           });

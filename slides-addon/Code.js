@@ -2,7 +2,7 @@
 function onOpen(e) {
   SlidesApp.getUi()
     .createAddonMenu()
-    .addItem('Open Tab Order Checker', 'showSidebar')
+    .addItem('Open Tab Order Manager', 'showSidebar')
     .addToUi();
 }
 
@@ -40,9 +40,17 @@ function getSlideElements() {
     let itemType = rawType;
     let textContent = "";
     
-    // If it's a shape, try to extract the text inside it
+    // Check if it's actually a Text Box (subtype of shapes)
     if (rawType === "SHAPE") {
-      textContent = element.asShape().getText().asString().trim();
+      const shape = element.asShape();
+      textContent = shape.getText().asString().trim();
+      
+      // Check the exact sub-type of the shape
+      if (shape.getShapeType() === SlidesApp.ShapeType.TEXT_BOX) {
+        itemType = "Text Box";
+      } else {
+        itemType = "Shape";
+      }
     }
 
     // Display Name
