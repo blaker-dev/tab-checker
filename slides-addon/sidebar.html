@@ -38,9 +38,9 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        cursor: grab; /* Changed to grab for drag context */
+        cursor: grab; 
         transition: background-color 0.2s, opacity 0.2s;
-        display: flex; /* Align items nicely */
+        display: flex; 
         align-items: center;
       }
       .element-list li:active {
@@ -56,7 +56,7 @@
       .element-list li:last-child { border-bottom: none; }
       
       .number-span {
-        min-width: 24px; /* Keeps numbers aligned when hitting double digits */
+        min-width: 24px; 
         font-weight: bold;
       }
       
@@ -144,8 +144,8 @@
 
           elements.forEach((el, index) => {
             const li = document.createElement('li');
-            li.draggable = true; // Make it draggable
-            li.dataset.id = el.id; // Store the Google Slide Object ID
+            li.draggable = true; 
+            li.dataset.id = el.id; 
             
             const numberSpan = document.createElement('span');
             numberSpan.className = 'number-span';
@@ -171,7 +171,7 @@
               google.script.run.highlightElementInSlide(el.id);
             });
 
-            // --- DRAG AND DROP EVENTS ---
+            // Drag and Drop Events
             li.addEventListener('dragstart', () => {
               li.classList.add('dragging');
             });
@@ -197,7 +197,7 @@
           }
         });
 
-        // Helper function to figure out exactly where the mouse is relative to other items
+        // Helper function - determine relative mouse position to other items
         function getDragAfterElement(container, y) {
           const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
 
