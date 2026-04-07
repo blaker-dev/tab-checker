@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Tab Order Checker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h2>Tab Order sequence</h2>
+      <p>Current slide elements in navigation order.</p>
+    </header>
+
+    <ol id="tab-order-list" class="element-list">
+      </ol>
+
+    <div class="actions">
+      <button id="scan-btn" class="primary-btn">Scan Current Slide</button>
+      <div id="status-message" class="status"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

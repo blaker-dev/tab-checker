@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Slide Tab Order Checker",
+  "version": "1.0",
+  "description": "Checks the reading/tab order of Google Slides elements.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ]
+}
