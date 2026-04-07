@@ -79,3 +79,25 @@ function highlightElementInSlide(objectId) {
     }
   }
 }
+
+function reorderSlideElements(orderedIds) {
+  const presentation = SlidesApp.getActivePresentation();
+  const currentPage = presentation.getSelection().getCurrentPage();
+  if (!currentPage) throw new Error("No slide selected.");
+
+  const elements = currentPage.getPageElements();
+  
+  // Create a map to quickly look up elements by their ID
+  const elementMap = {};
+  elements.forEach(el => {
+    elementMap[el.getObjectId()] = el;
+  });
+
+  // Rebuild the exact stack order by sequentially bringing elements to the front
+  orderedIds.forEach(id => {
+    const el = elementMap[id];
+    if (el) {
+      el.bringToFront();
+    }
+  });
+}

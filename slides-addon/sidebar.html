@@ -28,7 +28,7 @@
         padding: 0;
         margin: 0 0 16px 0;
         list-style-position: inside;
-        max-height: 400px; /* Made slightly taller for the sidebar */
+        max-height: 400px; 
         overflow-y: auto;
       }
       .element-list li {
@@ -38,13 +38,28 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        cursor: pointer; /* Added pointer cursor */
-        transition: background-color 0.2s;
+        cursor: grab; /* Changed to grab for drag context */
+        transition: background-color 0.2s, opacity 0.2s;
+        display: flex; /* Align items nicely */
+        align-items: center;
+      }
+      .element-list li:active {
+        cursor: grabbing;
       }
       .element-list li:hover {
-        background-color: #f1f3f4; /* Hover effect for list items */
+        background-color: #f1f3f4; 
+      }
+      .element-list li.dragging {
+        opacity: 0.5;
+        background-color: #e8eaed;
       }
       .element-list li:last-child { border-bottom: none; }
+      
+      .number-span {
+        min-width: 24px; /* Keeps numbers aligned when hitting double digits */
+        font-weight: bold;
+      }
+      
       .type-badge {
         display: inline-block;
         background: #e8f0fe;
@@ -80,13 +95,13 @@
     <div class="container">
       <header>
         <h2>Tab Order sequence</h2>
-        <p>Current slide elements in navigation order. Click an item to select it on the slide.</p>
+        <p>Drag and drop items to fix the screen reader order. Click an item to select it.</p>
       </header>
 
       <ol id="tab-order-list" class="element-list"></ol>
 
       <div class="actions">
-        <button id="scan-btn" class="primary-btn">Scan Current Slide</button>
+        <button id="scan-btn" class="primary-btn">Refresh / Scan Slide</button>
         <div id="status-message" class="status"></div>
       </div>
     </div>
@@ -97,11 +112,15 @@
         const listContainer = document.getElementById('tab-order-list');
         const statusMsg = document.getElementById('status-message');
 
-        scanBtn.addEventListener('click', () => {
+        // Initial scan on load
+        triggerScan();
+
+        scanBtn.addEventListener('click', triggerScan);
+
+        function triggerScan() {
           statusMsg.textContent = "Scanning slide...";
           statusMsg.style.color = "#5f6368";
           
-          // Call the Apps Script backend function using google.script.run
           google.script.run
             .withSuccessHandler((elements) => {
                renderList(elements);
@@ -113,7 +132,7 @@
                statusMsg.style.color = "#d93025"; 
             })
             .getSlideElements();
-        });
+        }
 
         function renderList(elements) {
           listContainer.innerHTML = ''; 
@@ -125,8 +144,12 @@
 
           elements.forEach((el, index) => {
             const li = document.createElement('li');
+            li.draggable = true; // Make it draggable
+            li.dataset.id = el.id; // Store the Google Slide Object ID
             
-            const numberSpan = document.createElement('strong');
+            const numberSpan = document.createElement('span');
+            numberSpan.className = 'number-span';
+            numberSpan.textContent = `${index + 1}. `;
             
             const badge = document.createElement('span');
             badge.className = 'type-badge';
@@ -143,13 +166,77 @@
             li.appendChild(badge);
             li.appendChild(textSpan);
             
-            // Highlight element on click (server call)
+            // Highlight element on click
             li.addEventListener('click', () => {
               google.script.run.highlightElementInSlide(el.id);
             });
 
+            // --- DRAG AND DROP EVENTS ---
+            li.addEventListener('dragstart', () => {
+              li.classList.add('dragging');
+            });
+
+            li.addEventListener('dragend', () => {
+              li.classList.remove('dragging');
+              updateNumbersAndSave();
+            });
+
             listContainer.appendChild(li);
           });
+        }
+
+        // Logic to visually reorder the list as you drag over it
+        listContainer.addEventListener('dragover', e => {
+          e.preventDefault(); // Required to allow dropping
+          const afterElement = getDragAfterElement(listContainer, e.clientY);
+          const draggable = document.querySelector('.dragging');
+          if (afterElement == null) {
+            listContainer.appendChild(draggable);
+          } else {
+            listContainer.insertBefore(draggable, afterElement);
+          }
+        });
+
+        // Helper function to figure out exactly where the mouse is relative to other items
+        function getDragAfterElement(container, y) {
+          const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+
+          return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Updates the visual numbers and sends the new order to the backend
+        function updateNumbersAndSave() {
+          statusMsg.textContent = "Saving new order...";
+          statusMsg.style.color = "#1a73e8";
+
+          const allItems = listContainer.querySelectorAll('li');
+          const newOrderIds = [];
+
+          allItems.forEach((li, index) => {
+            const numberSpan = li.querySelector('.number-span');
+            
+            newOrderIds.push(li.dataset.id);
+          });
+
+          // send array of IDs in new order to backend
+          google.script.run
+            .withSuccessHandler(() => {
+               statusMsg.textContent = "Order saved successfully!";
+               statusMsg.style.color = "#1e8e3e"; 
+            })
+            .withFailureHandler((error) => {
+               statusMsg.textContent = "Failed to save order: " + error.message;
+               statusMsg.style.color = "#d93025"; 
+            })
+            .reorderSlideElements(newOrderIds);
         }
       });
     </script>
