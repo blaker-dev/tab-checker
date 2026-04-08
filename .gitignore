@@ -1,0 +1,36 @@
+# --- Google Apps Script / Clasp ---
+# Always ignore .clasp.json as it contains your unique Script ID.
+.clasp.json
+
+# Ignore build artifacts if using a bundler (like Webpack or esbuild)
+dist/
+build/
+
+# --- Node.js ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Secrets and Environment ---
+.env
+*.secret
+*.pem
+credentials.json
+client_secret.json
+
+# --- Operating System Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- IDE / Editor Settings ---
+.vscode/
+.idea/
+*.swp
+*.bak
